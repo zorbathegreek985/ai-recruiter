@@ -1,11 +1,13 @@
 # AI Recruiter — Intelligent Candidate Discovery & Ranking
 
-A production-quality AI-powered recruitment assistant that ranks candidates against job descriptions using semantic understanding, embeddings, and explainable AI.
-
-# AI Recruiter – Intelligent Candidate Discovery & Ranking
+A production-quality AI-powered recruitment assistant that ranks candidates against job descriptions using semantic understanding, embeddings, and explainable AI.ss
 
 ## Live Demo
 🔗 https://ai-recruiter-ewawqciumiktapyyt5gq3k.streamlit.app
+
+## Demo Screenshot
+
+![AI Recruiter Dashboard](assets/dashboard.png)
 
 ## GitHub Repository
 🔗 https://github.com/zorbathegreek985/ai-recruiter
