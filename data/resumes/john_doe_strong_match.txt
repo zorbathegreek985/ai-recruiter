@@ -1,0 +1,38 @@
+JOHN DOE
+Email: john.doe@email.com | Phone: +91-9876543210 | LinkedIn: linkedin.com/in/johndoe | Location: Bangalore, India
+
+PROFESSIONAL SUMMARY
+Senior Machine Learning Engineer with 4+ years of experience building and deploying production ML systems. Expertise in Python, TensorFlow, PyTorch, and AWS. Passionate about NLP and LLMs.
+
+SKILLS
+Programming: Python, SQL, Java
+Machine Learning: TensorFlow, PyTorch, Scikit-learn, XGBoost, Hugging Face
+Cloud & MLOps: AWS (SageMaker, Lambda, S3, EC2), Docker, Kubernetes, MLflow
+Data: Pandas, NumPy, Spark, SQL
+NLP/LLM: Transformers, LangChain, OpenAI APIs, RAG systems
+Other: Git, CI/CD, FastAPI
+
+EXPERIENCE
+Senior ML Engineer | TechCorp AI | Bangalore | Jan 2022 - Present
+- Led development of NLP-based document processing system using BERT and LLMs, improving accuracy by 35%
+- Built and deployed recommendation engine on AWS SageMaker serving 1M+ users
+- Implemented MLOps pipelines with MLflow and Kubernetes reducing deployment time by 60%
+- Mentored 3 junior engineers on ML best practices
+
+ML Engineer | DataSense | Bangalore | Jun 2020 - Dec 2021
+- Developed fraud detection model using XGBoost and deep learning achieving 98% precision
+- Created data pipelines with Apache Spark and AWS Glue
+- Deployed models as REST APIs using FastAPI and Docker
+
+EDUCATION
+M.Tech in Computer Science (AI Specialization) | IIT Delhi | 2018 - 2020 | CGPA: 9.2
+B.Tech in Computer Science | NIT Karnataka | 2014 - 2018 | CGPA: 8.7
+
+PROJECTS
+- LLM-Powered Resume Screening Tool: Built end-to-end RAG system using LangChain, Pinecone, and Gemini. Reduced manual screening time by 80%.
+- Brain Tumor Detection from MRI: Computer vision model using PyTorch and ResNet, deployed on AWS. Achieved 96% accuracy.
+- Real-time Sentiment Analysis API: NLP pipeline with BERT, deployed on AWS Lambda.
+
+CERTIFICATIONS
+- AWS Certified Machine Learning - Specialty
+- Google Professional ML Engineer

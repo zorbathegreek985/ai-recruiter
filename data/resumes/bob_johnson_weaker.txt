@@ -1,0 +1,34 @@
+BOB JOHNSON
+Email: bob.johnson@email.com | Phone: +91-9988776655 | LinkedIn: linkedin.com/in/bobjohnson | Location: Pune, India
+
+PROFESSIONAL SUMMARY
+Software Engineer with 3 years experience in web development and backend systems. Some Python scripting. Interested in transitioning to AI/ML roles. Strong in Java and cloud basics.
+
+SKILLS
+Programming: Java, Python (intermediate), JavaScript, SQL, C++
+Web/Backend: Spring Boot, React, Node.js, PostgreSQL
+Cloud: Azure (basic), Docker
+Data: Basic Pandas, Excel, SQL queries
+Other: Git, Jenkins, REST APIs
+
+EXPERIENCE
+Software Engineer | WebScale Inc | Pune | Aug 2021 - Present
+- Developed microservices using Java Spring Boot and React frontend
+- Built REST APIs and integrated with PostgreSQL
+- Containerized applications with Docker
+- Implemented CI/CD pipelines with Jenkins
+
+Software Developer Intern | StartupXYZ | Pune | Jan 2021 - Jul 2021
+- Worked on Python scripts for data processing
+- Maintained legacy Java applications
+
+EDUCATION
+B.Tech in Computer Engineering | VIT Pune | 2017 - 2021 | CGPA: 7.8
+
+PROJECTS
+- E-commerce Platform: Full stack app with Java backend and React.
+- Task Management API: RESTful service with authentication.
+- Basic Data Dashboard: Python + Pandas + Matplotlib for internal sales data.
+
+CERTIFICATIONS
+- Microsoft Azure Fundamentals (AZ-900)

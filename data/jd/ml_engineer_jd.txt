@@ -1,0 +1,36 @@
+Job Title: Senior Machine Learning Engineer
+
+Company: TechNova AI
+
+Location: Remote / Bangalore, India
+
+Experience Required: 3+ years in Machine Learning / Data Science
+
+Education: Bachelor's or Master's in Computer Science, Data Science, or related field
+
+Required Skills:
+- Strong proficiency in Python
+- Experience with TensorFlow or PyTorch
+- AWS (SageMaker, EC2, S3, Lambda)
+- Machine Learning algorithms and model deployment
+- NLP and LLM experience preferred
+- SQL and data pipelines
+
+Preferred Skills:
+- Experience with Docker and Kubernetes
+- MLOps practices (MLflow, Kubeflow)
+- Computer Vision
+- Big data tools (Spark, Hadoop)
+- Publications or open source contributions
+
+Responsibilities:
+- Design, develop and deploy ML models for production
+- Build scalable data pipelines
+- Collaborate with product and engineering teams
+- Mentor junior engineers
+- Stay up to date with latest AI research
+
+Key Projects Expected:
+- End-to-end ML systems
+- NLP applications (chatbots, summarization)
+- Recommendation systems or fraud detection

@@ -1,0 +1,38 @@
+ALICE CHEN
+Email: alice.chen@email.com | Phone: +91-8877665544 | LinkedIn: linkedin.com/in/alicechen | Location: Bangalore, India
+
+PROFESSIONAL SUMMARY
+ML Engineer specializing in NLP and LLMs with 3 years experience. Expert in Python, Hugging Face, and building RAG systems. Experience with AWS and TensorFlow.
+
+SKILLS
+Programming: Python, SQL, TypeScript
+Machine Learning: TensorFlow, PyTorch, Hugging Face Transformers, LangChain, LlamaIndex
+NLP/LLM: BERT, GPT fine-tuning, RAG, Vector DBs (Pinecone, Weaviate), Prompt Engineering
+Cloud: AWS (SageMaker, Bedrock, Lambda, S3), GCP Vertex AI
+MLOps: Docker, Kubernetes, FastAPI, MLflow
+Data Science: Pandas, NumPy, Scikit-learn, SQL
+
+EXPERIENCE
+ML Engineer - NLP | AILabs | Bangalore | Feb 2022 - Present
+- Designed and deployed multiple LLM-powered applications including chatbot and document Q&A using LangChain + RAG achieving 85% user satisfaction
+- Fine-tuned BERT models for domain-specific NER and classification tasks
+- Built scalable inference pipelines on AWS SageMaker and integrated with production apps
+- Led initiative to evaluate and integrate open-source LLMs (Llama, Mistral)
+
+AI Research Engineer | ResearchCo | Bangalore | Jun 2021 - Jan 2022
+- Worked on research projects in NLP and information retrieval
+- Published paper on efficient transformer inference
+- Implemented data pipelines and model training infrastructure
+
+EDUCATION
+M.S. in Artificial Intelligence | Stanford University (online) | 2020 - 2022
+B.Tech in Computer Science | BITS Pilani | 2016 - 2020 | CGPA: 9.0
+
+PROJECTS
+- Enterprise RAG System: Full production RAG with hybrid search, citation, and evaluation framework. Used by 500+ employees.
+- Multi-lingual Chatbot: Fine-tuned models for 5 Indian languages.
+- Automated Resume Parser: Used NER + LLMs to extract structured data from PDFs (similar to this system!)
+
+CERTIFICATIONS
+- AWS Certified AI Practitioner
+- DeepLearning.AI LLM Engineering
