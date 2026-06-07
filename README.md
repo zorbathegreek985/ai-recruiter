@@ -2,6 +2,22 @@
 
 A production-quality AI-powered recruitment assistant that ranks candidates against job descriptions using semantic understanding, embeddings, and explainable AI.
 
+# AI Recruiter – Intelligent Candidate Discovery & Ranking
+
+## Live Demo
+🔗 https://ai-recruiter-ewawqciumiktapyyt5gq3k.streamlit.app
+
+## GitHub Repository
+🔗 https://github.com/zorbathegreek985/ai-recruiter
+
+### Features
+- Resume Parsing
+- Candidate Ranking
+- Skill Gap Analysis
+- Recruiter Search (RAG)
+- AI Interview Question Generation
+- Analytics Dashboard
+
 ## Project Goal
 Build an intelligent system that:
 - Parses resumes and JDs from PDFs/text
