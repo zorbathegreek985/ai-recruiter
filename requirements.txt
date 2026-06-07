@@ -14,3 +14,4 @@ tqdm>=4.66.0
 pypdf2>=3.0.1
 fpdf2>=2.7.0
 # Note: sentence-transformers not included (heavy). Using Gemini embeddings when API key provided, otherwise TF-IDF fallback.
+https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl

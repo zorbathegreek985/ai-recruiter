@@ -15,9 +15,7 @@ import os
 try:
     nlp = spacy.load("en_core_web_sm")
 except OSError:
-    print("Downloading spaCy model...")
-    os.system("python -m spacy download en_core_web_sm")
-    nlp = spacy.load("en_core_web_sm")
+    nlp = spacy.blank("en")
 
 # Predefined Skill Ontology (expandable)
 SKILL_ONTOLOGY = {
