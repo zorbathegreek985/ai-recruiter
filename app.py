@@ -17,6 +17,8 @@ from parsers.resume_parser import (
 )
 from parsers.jd_parser import get_optional_dependency_warnings as get_jd_parser_warnings
 from agents import analyze_jd, rank_candidates_with_agents
+from agents.career_growth_agent import generate_growth_plan
+from agents.fairness_agent import build_fairness_dashboard
 from explainability.explanation_engine import (
     generate_explanation, generate_skill_gap_analysis, 
     generate_interview_questions
@@ -38,6 +40,7 @@ from embeddings.embedding_engine import semantic_similarity
 from explainability.scoring_explainer import build_score_evidence
 from explainability.skill_gap_engine import build_advanced_skill_gap
 from reports.pdf_report import create_candidate_pdf_report
+from reports.executive_report import create_executive_pdf_report
 from agents.bias_agent import analyze_bias_signals
 from agents.github_agent import analyze_github_profile
 from agents.interview_agent import generate_interview_plan
@@ -53,15 +56,59 @@ st.set_page_config(
 # Custom CSS for better look
 st.markdown("""
 <style>
-    .main-header {font-size: 2.5rem; font-weight: 700; color: #1a73e8;}
+    .main-header {font-size: 2.5rem; font-weight: 750; color: #12355b; margin-bottom: 0.2rem;}
     .score-badge {padding: 4px 12px; border-radius: 20px; font-weight: 600;}
     .high-score {background-color: #d4edda; color: #155724;}
     .medium-score {background-color: #fff3cd; color: #856404;}
     .low-score {background-color: #f8d7da; color: #721c24;}
-    .stTabs [data-baseweb="tab-list"] {gap: 8px;}
-    .candidate-card {border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin: 8px 0;}
+    .stApp {background: #f7f9fc;}
+    .block-container {padding-top: 1.5rem;}
+    .stTabs [data-baseweb="tab-list"] {gap: 8px; flex-wrap: wrap;}
+    .candidate-card {
+        border: 1px solid #d9e2ec;
+        border-radius: 8px;
+        padding: 16px;
+        margin: 10px 0;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+    }
+    .agent-card {
+        border: 1px solid #d9e2ec;
+        border-left: 5px solid #1f77b4;
+        border-radius: 8px;
+        padding: 16px;
+        background: #ffffff;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.08);
+    }
+    .agent-card h3 {margin: 0 0 6px 0; color: #102a43;}
+    .subtle {color: #52616b; font-size: 0.92rem;}
+    .pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: #e6f4ff;
+        color: #0b5394;
+        font-size: 0.82rem;
+        font-weight: 650;
+        margin-right: 6px;
+    }
 </style>
 """, unsafe_allow_html=True)
+
+
+def safe_plotly_chart(fig, **kwargs):
+    if fig is None:
+        st.info("Charts are unavailable because Plotly is not installed in this environment.")
+    else:
+        st.plotly_chart(fig, **kwargs)
+
+
+def render_list(items: List[str], empty: str = "None detected"):
+    if not items:
+        st.write(empty)
+    for item in items:
+        st.write(f"- {item}")
 
 optional_dependency_warnings = sorted(
     set(get_resume_parser_warnings() + get_jd_parser_warnings())

@@ -3,13 +3,21 @@ Resume Parser Module
 Parses PDF resumes into structured JSON using PyMuPDF, optional pdfplumber, and spaCy.
 Handles various formats, extracts name, email, skills, education, experience, projects.
 """
-import fitz  # PyMuPDF
-import spacy
 import re
 import json
 from typing import Dict, List, Any, Optional
 import os
 import warnings
+
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+
+try:
+    import spacy
+except ImportError:
+    spacy = None
 
 try:
     import pdfplumber
@@ -20,6 +28,20 @@ PDFPLUMBER_MISSING_MESSAGE = (
     "pdfplumber is not installed. The app can still run and parse most PDFs with "
     "PyMuPDF, but difficult scanned or layout-heavy PDFs may extract less text."
 )
+PYMUPDF_MISSING_MESSAGE = (
+    "PyMuPDF is not installed. PDF resume parsing is unavailable, but text resumes "
+    "and pasted text workflows can still be used."
+)
+
+
+class _BlankDoc:
+    ents: List[Any] = []
+    noun_chunks: List[Any] = []
+
+
+class _BlankNLP:
+    def __call__(self, text: str) -> _BlankDoc:
+        return _BlankDoc()
 
 
 def get_optional_dependency_warnings() -> List[str]:
@@ -27,10 +49,13 @@ def get_optional_dependency_warnings() -> List[str]:
     return [] if pdfplumber is not None else [PDFPLUMBER_MISSING_MESSAGE]
 
 # Load spaCy model (small for speed)
-try:
-    nlp = spacy.load("en_core_web_sm")
-except OSError:
-    nlp = spacy.blank("en")
+if spacy is None:
+    nlp = _BlankNLP()
+else:
+    try:
+        nlp = spacy.load("en_core_web_sm")
+    except OSError:
+        nlp = spacy.blank("en")
 
 # Predefined Skill Ontology (expandable)
 SKILL_ONTOLOGY = {
@@ -59,12 +84,19 @@ def extract_text_from_pdf(pdf_path: str) -> str:
             return ""
     
     text = ""
+    if fitz is None:
+        warnings.warn(PYMUPDF_MISSING_MESSAGE, RuntimeWarning)
+        if pdfplumber is None:
+            warnings.warn(PDFPLUMBER_MISSING_MESSAGE, RuntimeWarning)
+            return ""
+
     try:
         # Method 1: PyMuPDF (good for layout)
-        doc = fitz.open(pdf_path)
-        for page in doc:
-            text += page.get_text("text") + "\n"
-        doc.close()
+        if fitz is not None:
+            doc = fitz.open(pdf_path)
+            for page in doc:
+                text += page.get_text("text") + "\n"
+            doc.close()
     except Exception as e:
         warnings.warn(f"PyMuPDF failed: {e}", RuntimeWarning)
     

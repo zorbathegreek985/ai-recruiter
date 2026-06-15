@@ -7,6 +7,8 @@ existing Streamlit app can keep using the same candidate and JD data shapes.
 from agents.jd_analyst_agent import analyze_jd
 from agents.candidate_analyst_agent import analyze_candidate
 from agents.bias_agent import analyze_bias_signals
+from agents.career_growth_agent import generate_growth_plan
+from agents.fairness_agent import build_fairness_dashboard
 from agents.github_agent import analyze_github_profile
 from agents.match_agent import analyze_match
 from agents.risk_agent import analyze_candidate_risk, analyze_batch_risk
@@ -18,6 +20,8 @@ __all__ = [
     "analyze_jd",
     "analyze_candidate",
     "analyze_bias_signals",
+    "generate_growth_plan",
+    "build_fairness_dashboard",
     "analyze_github_profile",
     "analyze_match",
     "analyze_candidate_risk",

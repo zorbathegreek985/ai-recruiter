@@ -37,48 +37,87 @@ def generate_interview_plan(
         focus_areas.append("Confirm depth behind strong resume signals")
 
     primary_skill = (jd.get("required_skills") or skills or ["the core stack"])[0]
+    secondary_skill = (jd.get("required_skills") or skills or ["the core stack"])[1:2] or [primary_skill]
     project = (projects or ["a relevant project"])[0]
     role = jd.get("role_category", "the role")
 
-    questions: List[Dict[str, str]] = [
+    technical_questions: List[Dict[str, str]] = [
         {
             "type": "Technical",
             "question": f"Walk through a production problem where you used {primary_skill}. What tradeoffs did you make?",
             "signal": "Hands-on technical depth",
         },
         {
-            "type": "Project",
+            "type": "Technical",
+            "question": f"How would you evaluate model or system quality for a {role} workflow?",
+            "signal": "Evaluation maturity",
+        },
+        {
+            "type": "Technical",
+            "question": f"Explain the hardest debugging issue you faced while using {secondary_skill[0]}.",
+            "signal": "Practical depth",
+        },
+        {
+            "type": "Technical",
+            "question": "How do you design data validation, monitoring, and rollback for an AI feature in production?",
+            "signal": "Production readiness",
+        },
+        {
+            "type": "Technical",
+            "question": f"Design an end-to-end system for {role}, including deployment, monitoring, and failure modes.",
+            "signal": "Architecture maturity",
+        },
+    ]
+
+    scenario_questions: List[Dict[str, str]] = [
+        {
+            "type": "Scenario",
             "question": f"Explain your work on {project}. What was your contribution and measurable outcome?",
             "signal": "Ownership and evidence",
         },
         {
-            "type": "System Design",
-            "question": f"Design an end-to-end system for {role}, including deployment, monitoring, and failure modes.",
-            "signal": "Architecture maturity",
-        },
-        {
-            "type": "Problem Solving",
+            "type": "Scenario",
             "question": "How would you debug an AI workflow whose offline metrics look good but user outcomes are poor?",
             "signal": "Evaluation and debugging judgment",
         },
         {
-            "type": "Collaboration",
-            "question": "Tell us about a time you aligned product, data, and engineering teams around an AI deliverable.",
-            "signal": "Delivery and communication",
+            "type": "Scenario",
+            "question": "A stakeholder asks for a model launch before validation is complete. How would you handle the tradeoff?",
+            "signal": "Judgment under delivery pressure",
         },
     ]
 
+    hr_questions: List[Dict[str, str]] = [
+        {
+            "type": "HR",
+            "question": "Tell us about a time you aligned product, data, and engineering teams around an AI deliverable.",
+            "signal": "Delivery and communication",
+        },
+        {
+            "type": "HR",
+            "question": "What kind of team environment helps you do your best technical work?",
+            "signal": "Team fit",
+        },
+        {
+            "type": "HR",
+            "question": "Describe a time you received difficult feedback and changed your approach.",
+            "signal": "Coachability",
+        },
+    ]
+
+    follow_up_questions: List[Dict[str, str]] = []
     for skill in missing[:4]:
-        questions.append(
+        follow_up_questions.append(
             {
-                "type": "Gap Validation",
+                "type": "Follow-up",
                 "question": f"The JD requires {skill}. What adjacent experience do you have, and how would you ramp up in 30 days?",
                 "signal": "Coachability and transferability",
             }
         )
 
+    depth_questions: List[Dict[str, str]] = []
     for skill in matched[:3]:
-        questions.append(
+        depth_questions.append(
             {
                 "type": "Depth Check",
                 "question": f"You listed {skill}. Describe the hardest bug or tradeoff you faced while using it.",
@@ -86,6 +125,7 @@ def generate_interview_plan(
             }
         )
 
+    questions = technical_questions + scenario_questions + hr_questions + follow_up_questions + depth_questions
     overall = candidate.get("overall_score", scores.get("overall", 0))
     return {
         "candidate": candidate.get("name", "Unknown"),
@@ -93,9 +133,11 @@ def generate_interview_plan(
         "focus_areas": focus_areas,
         "questions": questions[: max(3, num_questions)],
         "question_groups": {
-            "technical": [q for q in questions if q["type"] in {"Technical", "System Design", "Depth Check"}],
-            "behavioral": [q for q in questions if q["type"] == "Collaboration"],
-            "role_specific": [q for q in questions if q["type"] in {"Project", "Problem Solving", "Gap Validation"}],
+            "technical": technical_questions[:5],
+            "scenario": scenario_questions[:3],
+            "hr": hr_questions[:3],
+            "follow_up": follow_up_questions,
+            "depth_check": depth_questions,
         },
         "scoring_rubric": [
             {"criterion": "Technical depth", "excellent": "Explains tradeoffs and failure modes", "concern": "Only names tools"},

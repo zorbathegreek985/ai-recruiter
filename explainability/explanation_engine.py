@@ -3,18 +3,23 @@ Explainable AI Layer
 Uses Gemini to generate recruiter-friendly explanations for rankings.
 """
 import os
-import google.generativeai as genai
 from typing import Dict, List, Any, Optional
 import json
+import warnings
+
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-if GOOGLE_API_KEY:
+if GOOGLE_API_KEY and genai is not None:
     try:
         genai.configure(api_key=GOOGLE_API_KEY)
         model = genai.GenerativeModel('gemini-1.5-flash')
         GEMINI_AVAILABLE = True
     except Exception as e:
-        print(f"Gemini init failed for explanations: {e}")
+        warnings.warn(f"Gemini init failed for explanations: {e}", RuntimeWarning)
         GEMINI_AVAILABLE = False
 else:
     GEMINI_AVAILABLE = False
@@ -68,7 +73,7 @@ Keep it objective, positive where deserved, and actionable. Do not mention the m
         if len(explanation) > 20:
             return explanation
     except Exception as e:
-        print(f"Gemini explanation error: {e}")
+        warnings.warn(f"Gemini explanation error: {e}", RuntimeWarning)
     
     return _template_explanation(candidate, jd, scores, rank)
 

@@ -53,13 +53,13 @@ def _weaknesses(candidate: Dict[str, Any], jd: Dict[str, Any], match: Dict[str, 
 def _recommendation(overall: float, risk: Dict[str, Any]) -> str:
     risk_level = risk.get("risk_level", "Low")
     if risk_level == "High":
-        return "Review Manually"
+        return "Consider"
     if overall >= 80 and risk_level == "Low":
         return "Strong Hire"
     if overall >= 65:
         return "Interview"
     if overall >= 50:
-        return "Maybe"
+        return "Consider"
     return "Reject"
 
 
@@ -88,11 +88,31 @@ def generate_hiring_recommendation(
     if not suggestions:
         suggestions.append("Proceed to interview with a depth-focused technical validation plan.")
 
+    risk_items = []
+    if risk.get("risk_level") in {"Medium", "High"}:
+        risk_items.append(f"{risk.get('risk_level')} resume risk score ({risk.get('risk_score', 0)})")
+    risk_items.extend(risk.get("anomalies", {}).get("reasons", [])[:3])
+    if risk.get("duplicates"):
+        risk_items.append("Possible duplicate candidate profile in batch")
+    if not risk_items:
+        risk_items.append("No major resume risk signals detected")
+
+    recommendation = _recommendation(overall, risk)
+    recruiter_explanation = (
+        f"{candidate.get('name', 'This candidate')} is classified as {recommendation} "
+        f"with {confidence}% confidence. The decision is driven by an overall match of "
+        f"{round(overall, 1)}%, skill alignment of {round(match.get('skill_match', 0), 1)}%, "
+        f"and a {risk.get('risk_level', 'Low').lower()} risk profile."
+    )
+
     return {
-        "recommendation": _recommendation(overall, risk),
+        "recommendation": recommendation,
         "confidence_score": confidence,
         "strengths": strengths,
         "weaknesses": weaknesses,
+        "risks": risk_items[:5],
         "missing_skills": missing,
         "improvement_suggestions": suggestions[:4],
+        "hiring_recommendation": recommendation,
+        "recruiter_explanation": recruiter_explanation,
     }

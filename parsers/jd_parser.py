@@ -2,11 +2,15 @@
 Job Description Parser Module
 Parses JD PDF or text into structured requirements.
 """
-import fitz
 import re
 from typing import Dict, List, Any, Optional
 import os
 import warnings
+
+try:
+    import fitz
+except ImportError:
+    fitz = None
 
 try:
     import pdfplumber
@@ -16,6 +20,10 @@ except ImportError:
 PDFPLUMBER_MISSING_MESSAGE = (
     "pdfplumber is not installed. The app can still run and parse most PDFs with "
     "PyMuPDF, but difficult scanned or layout-heavy PDFs may extract less text."
+)
+PYMUPDF_MISSING_MESSAGE = (
+    "PyMuPDF is not installed. PDF JD parsing is unavailable, but pasted text and "
+    "text file workflows can still be used."
 )
 
 
@@ -34,11 +42,17 @@ def extract_text_from_jd(jd_path_or_text: str) -> str:
                 warnings.warn(f"txt read failed: {e}", RuntimeWarning)
         elif jd_path_or_text.lower().endswith('.pdf'):
             text = ""
+            if fitz is None:
+                warnings.warn(PYMUPDF_MISSING_MESSAGE, RuntimeWarning)
+                if pdfplumber is None:
+                    warnings.warn(PDFPLUMBER_MISSING_MESSAGE, RuntimeWarning)
+                    return ""
             try:
-                doc = fitz.open(jd_path_or_text)
-                for page in doc:
-                    text += page.get_text("text") + "\n"
-                doc.close()
+                if fitz is not None:
+                    doc = fitz.open(jd_path_or_text)
+                    for page in doc:
+                        text += page.get_text("text") + "\n"
+                    doc.close()
             except Exception as e:
                 warnings.warn(f"PyMuPDF JD failed: {e}", RuntimeWarning)
                 if pdfplumber is None:

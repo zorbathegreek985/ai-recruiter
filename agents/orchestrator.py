@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 
 from agents.candidate_analyst_agent import analyze_candidate
 from agents.bias_agent import analyze_bias_signals
+from agents.career_growth_agent import generate_growth_plan
 from agents.github_agent import analyze_github_profile
 from agents.hiring_agent import generate_hiring_recommendation
 from agents.interview_agent import generate_interview_plan
@@ -40,6 +41,10 @@ def run_recruiting_pipeline(candidates: List[Dict[str, Any]], jd: Dict[str, Any]
             analyzed_jd,
             {"missing_skills": hiring.get("missing_skills", []), "matched_skills": advanced_gap.get("matched_required", [])},
         )
+        career_growth_plan = generate_growth_plan(
+            {**candidate, "scores": scores, "overall_score": scores["overall"], "advanced_skill_gap": advanced_gap},
+            analyzed_jd,
+        )
         bias_report = analyze_bias_signals(candidate)
         github_report = analyze_github_profile(candidate)
 
@@ -65,6 +70,7 @@ def run_recruiting_pipeline(candidates: List[Dict[str, Any]], jd: Dict[str, Any]
                 "advanced_skill_gap": advanced_gap,
                 "score_evidence": score_evidence,
                 "interview_plan": interview_plan,
+                "career_growth_plan": career_growth_plan,
                 "bias_report": bias_report,
                 "github_report": github_report,
             }

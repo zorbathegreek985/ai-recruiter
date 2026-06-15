@@ -3,7 +3,10 @@ import os
 import re
 from typing import Any, Dict, Optional
 
-from fpdf import FPDF
+try:
+    from fpdf import FPDF
+except ImportError:
+    FPDF = None
 
 
 def _clean(text: Any) -> str:
@@ -25,6 +28,9 @@ def create_candidate_pdf_report(
     output_dir: Optional[str] = None,
 ) -> str:
     """Create a recruiter-ready candidate PDF and return the file path."""
+    if FPDF is None:
+        raise RuntimeError("PDF generation requires fpdf2. Install fpdf2 to enable downloadable reports.")
+
     output_dir = output_dir or os.path.join(os.getcwd(), "reports", "generated")
     os.makedirs(output_dir, exist_ok=True)
     path = os.path.join(output_dir, _safe_filename(candidate.get("name", "candidate")) + "_report.pdf")

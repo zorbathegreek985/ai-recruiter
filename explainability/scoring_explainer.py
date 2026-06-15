@@ -53,6 +53,19 @@ def build_score_evidence(candidate: Dict[str, Any], jd: Dict[str, Any]) -> Dict[
             "weight": SCORE_WEIGHTS["education"],
             "evidence": [candidate.get("education", "Not specified")],
         },
+        {
+            "dimension": "Risk",
+            "score": candidate.get("risk_report", {}).get("risk_score", 0),
+            "weight": 0,
+            "evidence": [
+                f"Risk level: {candidate.get('risk_report', {}).get('risk_level', 'Low')}",
+                "Signals: "
+                + (
+                    ", ".join(candidate.get("hiring_recommendation", {}).get("risks", [])[:4])
+                    or "No major risk signals detected"
+                ),
+            ],
+        },
     ]
 
     contribution_total = 0.0

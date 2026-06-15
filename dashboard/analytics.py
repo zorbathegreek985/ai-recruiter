@@ -1,17 +1,28 @@
+from __future__ import annotations
+
 """
 Analytics Dashboard Module
 Provides visualizations and aggregate stats using Plotly.
 """
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 from typing import List, Dict, Any
 import numpy as np
 
+try:
+    import plotly.express as px
+    import plotly.graph_objects as go
+except ImportError:
+    px = None
+    go = None
+
+
+def _empty_figure():
+    return go.Figure() if go is not None else None
+
 def create_ranking_distribution_chart(ranked_candidates: List[Dict[str, Any]]) -> go.Figure:
     """Bar chart of overall scores by rank."""
-    if not ranked_candidates:
-        return go.Figure()
+    if not ranked_candidates or px is None:
+        return _empty_figure()
     
     df = pd.DataFrame([{
         "Rank": c["rank"],
@@ -35,8 +46,8 @@ def create_ranking_distribution_chart(ranked_candidates: List[Dict[str, Any]]) -
 
 def create_score_breakdown_chart(candidate: Dict[str, Any]) -> go.Figure:
     """Radar / bar for one candidate's score components."""
-    if "scores" not in candidate:
-        return go.Figure()
+    if "scores" not in candidate or go is None:
+        return _empty_figure()
     
     scores = candidate["scores"]
     categories = ["Skill Match", "Experience", "Projects", "Education"]
@@ -63,8 +74,8 @@ def create_top_skills_chart(all_candidates: List[Dict[str, Any]], top_n: int = 1
         for skill in cand.get("skills", []):
             skill_counts[skill] = skill_counts.get(skill, 0) + 1
     
-    if not skill_counts:
-        return go.Figure()
+    if not skill_counts or px is None:
+        return _empty_figure()
     
     sorted_skills = sorted(skill_counts.items(), key=lambda x: x[1], reverse=True)[:top_n]
     df = pd.DataFrame(sorted_skills, columns=["Skill", "Count"])
@@ -91,8 +102,8 @@ def create_skill_gap_frequency_chart(ranked_candidates: List[Dict[str, Any]], jd
         for skill in gaps.get("missing_skills", []):
             missing_counts[skill] = missing_counts.get(skill, 0) + 1
     
-    if not missing_counts:
-        return go.Figure()
+    if not missing_counts or px is None:
+        return _empty_figure()
     
     df = pd.DataFrame(list(missing_counts.items()), columns=["Missing Skill", "Frequency"])
     df = df.sort_values("Frequency", ascending=False)
@@ -110,6 +121,8 @@ def create_skill_gap_frequency_chart(ranked_candidates: List[Dict[str, Any]], jd
 
 def create_average_match_gauge(ranked_candidates: List[Dict[str, Any]]) -> go.Figure:
     """Simple gauge / indicator for average match score."""
+    if go is None:
+        return _empty_figure()
     if not ranked_candidates:
         avg = 50
     else:

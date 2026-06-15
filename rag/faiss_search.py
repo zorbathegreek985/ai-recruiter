@@ -2,12 +2,16 @@
 RAG Candidate Search using FAISS
 Natural language semantic search over candidate embeddings.
 """
-import faiss
+try:
+    import faiss
+except ImportError:
+    faiss = None
 import numpy as np
 from typing import List, Dict, Any, Tuple, Optional
 from embeddings.embedding_engine import get_embedding, compute_cosine_similarity, batch_get_embeddings
 import os
 import pickle
+import warnings
 
 class CandidateVectorStore:
     """In-memory FAISS vector store for candidates."""
@@ -21,6 +25,9 @@ class CandidateVectorStore:
     
     def _rebuild_index(self):
         """Initialize or rebuild FAISS index."""
+        if faiss is None:
+            self.index = None
+            return
         if len(self.embeddings) == 0:
             self.index = faiss.IndexFlatIP(self.dimension)  # Inner product = cosine after norm
         else:
@@ -55,7 +62,7 @@ class CandidateVectorStore:
                 new_embs.append(emb)
                 self.candidates.append(cand)
             except Exception as e:
-                print(f"Embedding error for {cand.get('name')}: {e}")
+                warnings.warn(f"Embedding error for {cand.get('name')}: {e}", RuntimeWarning)
         
         if new_embs:
             self._rebuild_index()
@@ -73,7 +80,7 @@ class CandidateVectorStore:
     
     def search(self, query: str, top_k: int = 5) -> List[Dict[str, Any]]:
         """Semantic search for candidates matching natural language query."""
-        if not self.candidates or self.index is None or self.index.ntotal == 0:
+        if not self.candidates:
             return []
         
         query_emb = get_embedding(query)
@@ -83,7 +90,21 @@ class CandidateVectorStore:
             else:
                 query_emb = np.resize(query_emb, self.dimension)
         
-        query_emb = self._normalize(query_emb).astype('float32').reshape(1, -1)
+        query_emb = self._normalize(query_emb).astype('float32')
+
+        if faiss is None or self.index is None:
+            scored = []
+            for idx, emb in enumerate(self.embeddings):
+                scored.append((float(np.dot(query_emb, self._normalize(emb))), idx))
+            scored.sort(reverse=True)
+            results = []
+            for score, idx in scored[:top_k]:
+                cand = self.candidates[idx].copy()
+                cand["search_similarity"] = score
+                results.append(cand)
+            return results
+
+        query_emb = query_emb.reshape(1, -1)
         
         # Search
         scores, indices = self.index.search(query_emb, min(top_k, self.index.ntotal))
@@ -106,7 +127,7 @@ class CandidateVectorStore:
                 'embeddings': [e.tolist() for e in self.embeddings],
                 'dimension': self.dimension
             }, f)
-        print(f"Vector store saved to {path}")
+        warnings.warn(f"Vector store saved to {path}", RuntimeWarning)
     
     def load(self, path: str):
         """Load persisted store."""
@@ -117,7 +138,7 @@ class CandidateVectorStore:
             self.embeddings = [np.array(e, dtype=np.float32) for e in data['embeddings']]
             self.dimension = data['dimension']
             self._rebuild_index()
-            print(f"Vector store loaded from {path} with {len(self.candidates)} candidates")
+            warnings.warn(f"Vector store loaded from {path} with {len(self.candidates)} candidates", RuntimeWarning)
 
 # Global store instance (for Streamlit session)
 vector_store = CandidateVectorStore()
