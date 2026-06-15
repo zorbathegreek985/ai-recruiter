@@ -84,11 +84,11 @@ Streamlit Dashboard (app.py)
 
 1. Clone repo
 2. `cd ai-recruiter`
-3. `pip install -r requirements.txt`
+3. `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`
 4. Get Gemini API key from https://makersuite.google.com/app/apikey
 5. Create `.env` : `GOOGLE_API_KEY=your_key_here`
-6. `python -m spacy download en_core_web_sm` (if not done)
-7. `streamlit run app.py`
+6. `.\.venv\Scripts\python.exe -m spacy download en_core_web_sm` (if not done)
+7. `.\.venv\Scripts\python.exe -m streamlit run app.py`
 
 ## Sample Data
 Included in `data/` : sample resumes and JD PDFs generated for demo.
@@ -164,7 +164,7 @@ This app is ready for one-click deployment on Streamlit Cloud.
 cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 # Edit .streamlit/secrets.toml and add your real key
 
-streamlit run app.py
+.\.venv\Scripts\python.exe -m streamlit run app.py
 ```
 
 ### Notes for Streamlit Cloud

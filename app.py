@@ -2,6 +2,10 @@
 AI Recruiter - Main Streamlit Application
 Intelligent Candidate Discovery & Ranking
 """
+import sys
+print("PYTHON:", sys.executable)
+print("PATH:", sys.path)
+
 import streamlit as st
 import os
 import tempfile
@@ -11,8 +15,7 @@ import json
 
 # Import all modules
 from parsers.resume_parser import batch_parse_resumes, extract_structured_resume
-from parsers.jd_parser import extract_structured_jd
-from ranking.ranking_engine import rank_candidates, compute_overall_score
+from agents import analyze_jd, rank_candidates_with_agents
 from explainability.explanation_engine import (
     generate_explanation, generate_skill_gap_analysis, 
     generate_interview_questions
@@ -131,7 +134,7 @@ def load_samples():
     
     with st.spinner("Loading and parsing sample data..."):
         # Parse JD
-        jd = extract_structured_jd(jd_path)
+        jd = analyze_jd(jd_path)
         st.session_state.jd_data = jd
         
         # Parse resumes (txt supported)
@@ -139,7 +142,7 @@ def load_samples():
         st.session_state.candidates = parsed
         
         # Rank
-        ranked = rank_candidates(parsed, jd)
+        ranked = rank_candidates_with_agents(parsed, jd)
         st.session_state.ranked_candidates = ranked
         
         # Rebuild vector store
@@ -193,12 +196,12 @@ with tab1:
                         tmp_path = tmp.name
                     
                     if jd_file.name.endswith('.pdf'):
-                        jd = extract_structured_jd(tmp_path)
+                        jd = analyze_jd(tmp_path)
                     else:
-                        jd = extract_structured_jd(jd_text_input or jd_file.getvalue().decode())
+                        jd = analyze_jd(jd_text_input or jd_file.getvalue().decode())
                     os.unlink(tmp_path)
                 elif jd_text_input.strip():
-                    jd = extract_structured_jd(jd_text_input)
+                    jd = analyze_jd(jd_text_input)
                 else:
                     st.error("Please upload a file or paste text.")
                     jd = None
@@ -213,6 +216,7 @@ with tab1:
             st.subheader("📋 Extracted JD Information")
             
             st.markdown(f"**Role Category:** {jd.get('role_category', 'N/A')}")
+            st.markdown(f"**Industry / Domain:** {jd.get('industry_domain', 'N/A')}")
             st.markdown(f"**Experience Required:** {jd.get('experience', 'N/A')}")
             st.markdown(f"**Education:** {jd.get('education', 'N/A')[:100]}")
             
@@ -269,7 +273,7 @@ with tab2:
                         st.session_state.candidates = parsed_cands
                         
                         # Rank
-                        ranked = rank_candidates(parsed_cands, st.session_state.jd_data)
+                        ranked = rank_candidates_with_agents(parsed_cands, st.session_state.jd_data)
                         st.session_state.ranked_candidates = ranked
                         
                         # Update vector store
@@ -312,6 +316,7 @@ with tab2:
                     with cols[0]:
                         st.write("**Skills:**", ", ".join(cand.get("skills", [])[:10]) or "N/A")
                         st.write("**Projects:**", " | ".join(cand.get("projects", [])[:3]) or "N/A")
+                        st.write("**Certifications:**", ", ".join(cand.get("certifications", [])[:4]) or "N/A")
                         st.write("**Education:**", cand.get("education", "N/A")[:80])
                         st.write("**Email:**", cand.get("email", "N/A"))
                     
@@ -325,6 +330,17 @@ with tab2:
                         st.metric("Projects", f"{scores.get('projects', 0):.1f}")
                         st.metric("Education", f"{scores.get('education', 0):.1f}")
                         st.metric("Years Exp", cand.get("experience_years", 0))
+
+                    hiring = cand.get("hiring_recommendation", {})
+                    match = cand.get("agent_analysis", {}).get("match", {})
+                    risk = cand.get("risk_report", {})
+                    if hiring:
+                        st.info(
+                            f"**Hiring Agent:** {hiring.get('recommendation', 'N/A')} "
+                            f"| Confidence: {hiring.get('confidence_score', 0):.1f}% "
+                            f"| Semantic Fit: {match.get('semantic_fit', 0):.1f}% "
+                            f"| Risk: {risk.get('risk_level', 'N/A')}"
+                        )
                     
                     # Explanation
                     explanation = generate_explanation(
@@ -575,62 +591,42 @@ Answer:"""
         if st.button("Run Fraud & Duplicate Scan"):
             fraud_reports = []
             duplicate_pairs = []
-            
-            names = {}
-            emails = {}
-            
-            for i, c1 in enumerate(ranked):
-                name = c1.get("name", "").lower()
-                email = c1.get("email", "").lower() if c1.get("email") else None
-                
-                # Duplicate by name/email
-                if name in names:
-                    duplicate_pairs.append((names[name], c1["name"]))
-                else:
-                    names[name] = c1["name"]
-                if email and email in emails:
-                    duplicate_pairs.append((emails[email], c1["name"]))
-                elif email:
-                    emails[email] = c1["name"]
-                
-                # Simple fraud heuristics
-                text = c1.get("raw_text", "").lower()
-                fraud_score = 0
+
+            for c1 in ranked:
+                risk = c1.get("risk_report", {})
+                for duplicate in risk.get("duplicates", []):
+                    duplicate_pairs.append((duplicate["candidate_a"], duplicate["candidate_b"], duplicate["reason"]))
+
                 reasons = []
-                
-                # Keyword stuffing
-                if text.count("python") > 8 or text.count("tensorflow") > 5:
-                    fraud_score += 30
-                    reasons.append("High repetition of keywords (possible stuffing)")
-                
-                # Very short resume
-                if len(text) < 800:
-                    fraud_score += 25
-                    reasons.append("Unusually short resume content")
-                
-                # Mismatch: claims high exp but few projects/skills
-                if c1.get("experience_years", 0) > 5 and len(c1.get("skills", [])) < 4:
-                    fraud_score += 20
-                    reasons.append("High experience claimed with very few skills listed")
-                
-                if fraud_score > 25:
+                keyword_report = risk.get("keyword_stuffing", {})
+                if keyword_report.get("detected"):
+                    keywords = [
+                        f"{signal['keyword']} ({signal['count']}x)"
+                        for signal in keyword_report.get("signals", [])[:3]
+                    ]
+                    reasons.append("Keyword stuffing signals: " + ", ".join(keywords))
+
+                reasons.extend(risk.get("anomalies", {}).get("reasons", []))
+
+                if risk.get("risk_score", 0) > 25:
                     fraud_reports.append({
                         "name": c1["name"],
-                        "score": fraud_score,
+                        "score": risk.get("risk_score", 0),
+                        "level": risk.get("risk_level", "Low"),
                         "reasons": reasons
                     })
             
             if duplicate_pairs:
                 st.warning("**Possible Duplicates Found:**")
                 for p in set(duplicate_pairs):
-                    st.write(f"- {p[0]} and {p[1]}")
+                    st.write(f"- {p[0]} and {p[1]} ({p[2]})")
             else:
                 st.success("No obvious duplicates detected.")
             
             if fraud_reports:
                 st.error("**Potential Fraud / Low-Quality Resumes:**")
                 for f in fraud_reports:
-                    st.write(f"• **{f['name']}** (Risk: {f['score']}) — {', '.join(f['reasons'])}")
+                    st.write(f"• **{f['name']}** ({f['level']} Risk: {f['score']}) — {', '.join(f['reasons'])}")
             else:
                 st.success("No obvious fraud signals detected in current batch.")
         
