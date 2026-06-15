@@ -26,7 +26,20 @@ from dashboard.analytics import (
     create_top_skills_chart, create_skill_gap_frequency_chart,
     create_average_match_gauge, get_summary_stats
 )
+from dashboard.recruiter_dashboard import (
+    build_batch_summary,
+    build_candidate_decision_table,
+    compare_candidates,
+    filter_candidates,
+    sort_candidates,
+)
 from embeddings.embedding_engine import semantic_similarity
+from explainability.scoring_explainer import build_score_evidence
+from explainability.skill_gap_engine import build_advanced_skill_gap
+from reports.pdf_report import create_candidate_pdf_report
+from agents.bias_agent import analyze_bias_signals
+from agents.github_agent import analyze_github_profile
+from agents.interview_agent import generate_interview_plan
 
 # Page config
 st.set_page_config(
@@ -159,13 +172,16 @@ st.markdown('<h1 class="main-header">🤖 AI Recruiter</h1>', unsafe_allow_html=
 st.caption("Intelligent Candidate Discovery & Ranking using Semantic AI • Explainable • Production Ready")
 
 # Tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7, tab8, tab9 = st.tabs([
     "📄 Job Description", 
     "📁 Resumes & Ranking", 
     "🔍 Recruiter Search (RAG)", 
     "📊 Analytics", 
     "🔎 Skill Gaps & Insights",
-    "💬 AI Chatbot & Tools"
+    "💬 AI Chatbot & Tools",
+    "AI Interview Agent",
+    "Reports & Fairness",
+    "Batch & GitHub"
 ])
 
 # ============ TAB 1: JD ============
@@ -422,6 +438,7 @@ with tab4:
         jd = st.session_state.jd_data or {}
         
         stats = get_summary_stats(ranked)
+        batch_summary = build_batch_summary(ranked)
         
         # KPI cards
         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
@@ -429,6 +446,50 @@ with tab4:
         kpi2.metric("Avg Match Score", f"{stats['avg_score']}%")
         kpi3.metric("Top Score", f"{stats['top_score']}%")
         kpi4.metric("High Match (≥80%)", stats["high_match"])
+
+        st.subheader("Recruiter Decision Dashboard")
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Strong Hire", batch_summary["strong_hires"])
+        d2.metric("Interview Ready", batch_summary["interview_ready"])
+        d3.metric("Needs Review", batch_summary["needs_review"])
+        d4.metric("Avg Risk", batch_summary["avg_risk"])
+
+        search_col, score_col, risk_col, sort_col = st.columns(4)
+        with search_col:
+            dashboard_query = st.text_input("Search candidates", key="dashboard_search")
+        with score_col:
+            min_dashboard_score = st.slider("Minimum score", 0, 100, 0, 5, key="dashboard_min_score")
+        with risk_col:
+            max_dashboard_risk = st.selectbox("Maximum risk", ["High", "Medium", "Low"], key="dashboard_max_risk")
+        with sort_col:
+            dashboard_sort = st.selectbox(
+                "Sort by",
+                ["Overall", "Skill Match", "Experience", "Projects", "Education", "Lowest Risk"],
+                key="dashboard_sort",
+            )
+
+        filtered_ranked = sort_candidates(
+            filter_candidates(ranked, dashboard_query, min_dashboard_score, max_dashboard_risk),
+            dashboard_sort,
+        )
+        decision_df = build_candidate_decision_table(filtered_ranked)
+        st.dataframe(decision_df, use_container_width=True, hide_index=True)
+        st.download_button(
+            "Download shortlist CSV",
+            decision_df.to_csv(index=False).encode("utf-8"),
+            file_name="ai_recruiter_shortlist.csv",
+            mime="text/csv",
+        )
+
+        compare_names = st.multiselect(
+            "Compare candidates",
+            [c["name"] for c in ranked],
+            default=[c["name"] for c in ranked[: min(2, len(ranked))]],
+            key="dashboard_compare",
+        )
+        compared = [c for c in ranked if c["name"] in compare_names]
+        if compared:
+            st.dataframe(compare_candidates(compared), use_container_width=True, hide_index=True)
         
         st.divider()
         
@@ -515,6 +576,30 @@ with tab5:
                     st.write(", ".join(gaps["missing_skills"]) or "None")
                 
                 st.caption(f"Matched {gaps['total_matched']}/{gaps['total_required']} required skills")
+
+        st.divider()
+        st.subheader("Priority Gap Recommendations")
+        selected_gap_name = st.selectbox(
+            "Select candidate for prioritized gap plan:",
+            [c["name"] for c in ranked],
+            key="priority_gap_select",
+        )
+        selected_gap_candidate = next((c for c in ranked if c["name"] == selected_gap_name), None)
+        if selected_gap_candidate:
+            advanced_gap = selected_gap_candidate.get("advanced_skill_gap") or build_advanced_skill_gap(selected_gap_candidate, jd)
+            st.metric("Required Skill Coverage", f"{advanced_gap['coverage']}%")
+            st.info(advanced_gap["summary"])
+            if advanced_gap["priority_gaps"]:
+                st.dataframe(pd.DataFrame(advanced_gap["priority_gaps"]), use_container_width=True, hide_index=True)
+            else:
+                st.success("No priority gaps detected for this JD.")
+            if advanced_gap.get("recommended_learning_path"):
+                st.write("**Recommended Learning Path**")
+                st.dataframe(
+                    pd.DataFrame(advanced_gap["recommended_learning_path"]),
+                    use_container_width=True,
+                    hide_index=True,
+                )
 
 # ============ TAB 6: Bonus Tools ============
 with tab6:
@@ -631,6 +716,124 @@ Answer:"""
                 st.success("No obvious fraud signals detected in current batch.")
         
         st.caption("Note: These are heuristic-based signals for recruiter review only.")
+
+# ============ TAB 7: AI Interview Agent ============
+with tab7:
+    st.header("AI Interview Agent")
+
+    if not st.session_state.ranked_candidates or not st.session_state.jd_data:
+        st.info("Process candidates and a JD to generate interview kits.")
+    else:
+        ranked = st.session_state.ranked_candidates
+        jd = st.session_state.jd_data
+        selected_name = st.selectbox("Select candidate", [c["name"] for c in ranked], key="interview_agent_select")
+        candidate = next(c for c in ranked if c["name"] == selected_name)
+        legacy_gaps = generate_skill_gap_analysis(candidate, jd)
+        plan = candidate.get("interview_plan") or generate_interview_plan(candidate, jd, legacy_gaps)
+
+        st.metric("Recommended Round", plan["recommended_round"].title())
+        st.write("**Focus Areas**")
+        for area in plan["focus_areas"]:
+            st.write(f"- {area}")
+
+        st.write("**Interview Questions**")
+        for i, item in enumerate(plan["questions"], 1):
+            st.markdown(f"**Q{i}. [{item['type']}]** {item['question']}")
+            st.caption(f"Signal: {item['signal']}")
+
+        st.write("**Scorecard**")
+        st.write(", ".join(plan["scorecard"]))
+
+# ============ TAB 8: Reports, Fairness, Explainable Scoring ============
+with tab8:
+    st.header("Reports, Fairness, and Explainable Scoring")
+
+    if not st.session_state.ranked_candidates or not st.session_state.jd_data:
+        st.info("Process candidates and a JD to generate reports and fairness checks.")
+    else:
+        ranked = st.session_state.ranked_candidates
+        jd = st.session_state.jd_data
+        selected_name = st.selectbox("Select candidate", [c["name"] for c in ranked], key="report_candidate_select")
+        candidate = next(c for c in ranked if c["name"] == selected_name)
+
+        evidence = candidate.get("score_evidence") or build_score_evidence(candidate, jd)
+        gap_report = candidate.get("advanced_skill_gap") or build_advanced_skill_gap(candidate, jd)
+        bias_report = candidate.get("bias_report") or analyze_bias_signals(candidate)
+        interview_plan = candidate.get("interview_plan") or generate_interview_plan(candidate, jd)
+
+        st.subheader("Explainable Scorecard")
+        st.metric("Overall Score", evidence["overall"])
+        for dimension in evidence["dimensions"]:
+            with st.expander(f"{dimension['dimension']} - {dimension['score']}"):
+                st.write(f"Weight: {dimension['weight']}")
+                st.write(f"Weighted contribution: {dimension['weighted_contribution']}")
+                for item in dimension["evidence"]:
+                    st.write(f"- {item}")
+
+        st.subheader("Bias-Aware Screening")
+        st.metric("Bias Risk", bias_report["bias_risk_level"])
+        if bias_report["signals"]:
+            st.dataframe(pd.DataFrame(bias_report["signals"]), use_container_width=True, hide_index=True)
+        else:
+            st.success("No protected or proxy signals detected in the parsed resume text.")
+        with st.expander("Anonymized Screening Profile"):
+            st.json(bias_report["anonymized_profile"])
+        for guidance in bias_report["fair_screening_guidance"]:
+            st.caption(guidance)
+
+        st.subheader("Candidate PDF Report")
+        if st.button("Generate Candidate PDF Report"):
+            report_path = create_candidate_pdf_report(candidate, jd, evidence, gap_report, interview_plan)
+            with open(report_path, "rb") as report_file:
+                st.download_button(
+                    "Download PDF Report",
+                    report_file.read(),
+                    file_name=os.path.basename(report_path),
+                    mime="application/pdf",
+                )
+            st.success(f"Report generated: {report_path}")
+
+# ============ TAB 9: Batch Analysis and GitHub ============
+with tab9:
+    st.header("Batch Resume Analysis and GitHub Profile Analyzer")
+
+    if not st.session_state.ranked_candidates:
+        st.info("Process candidates to see batch and GitHub analysis.")
+    else:
+        ranked = st.session_state.ranked_candidates
+        summary = build_batch_summary(ranked)
+
+        st.subheader("Batch Health")
+        b1, b2, b3, b4 = st.columns(4)
+        b1.metric("Candidates", summary["total"])
+        b2.metric("Strong Hires", summary["strong_hires"])
+        b3.metric("Interview Ready", summary["interview_ready"])
+        b4.metric("Needs Review", summary["needs_review"])
+
+        st.write("**Top Missing Skills**")
+        if summary["top_missing_skills"]:
+            st.dataframe(
+                pd.DataFrame(summary["top_missing_skills"], columns=["Skill", "Missing Count"]),
+                use_container_width=True,
+                hide_index=True,
+            )
+        else:
+            st.success("No recurring missing skills detected.")
+
+        st.subheader("GitHub Profile Signals")
+        github_rows = []
+        for candidate in ranked:
+            report = candidate.get("github_report") or analyze_github_profile(candidate)
+            github_rows.append(
+                {
+                    "Candidate": candidate.get("name", "Unknown"),
+                    "GitHub": report.get("username") or "Not found",
+                    "Available": report.get("available"),
+                    "Score": report.get("score"),
+                    "Summary": report.get("summary"),
+                }
+            )
+        st.dataframe(pd.DataFrame(github_rows), use_container_width=True, hide_index=True)
 
 # Footer
 st.divider()

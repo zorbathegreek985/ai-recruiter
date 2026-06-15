@@ -77,6 +77,16 @@ def generate_hiring_recommendation(
     missing = _missing_skills(candidate, jd)
     strengths = _strengths(candidate, jd, match)
     weaknesses = _weaknesses(candidate, jd, match, risk)
+    suggestions = []
+    if missing:
+        suggestions.append("Validate adjacent experience for missing required skills before rejection.")
+        suggestions.append("Use the skill-gap learning path for trainable candidates.")
+    if match.get("project_match", match.get("scores", {}).get("projects", 0)) < 70:
+        suggestions.append("Ask for concrete project metrics, deployment details, and ownership evidence.")
+    if risk.get("risk_level") in {"Medium", "High"}:
+        suggestions.append("Run manual resume verification before advancing.")
+    if not suggestions:
+        suggestions.append("Proceed to interview with a depth-focused technical validation plan.")
 
     return {
         "recommendation": _recommendation(overall, risk),
@@ -84,4 +94,5 @@ def generate_hiring_recommendation(
         "strengths": strengths,
         "weaknesses": weaknesses,
         "missing_skills": missing,
+        "improvement_suggestions": suggestions[:4],
     }

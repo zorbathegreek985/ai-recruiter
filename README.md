@@ -19,6 +19,12 @@ A production-quality AI-powered recruitment assistant that ranks candidates agai
 - Recruiter Search (RAG)
 - AI Interview Question Generation
 - Analytics Dashboard
+- AI Interview Agent
+- Explainable Scoring Evidence
+- Candidate PDF Reports
+- Bias-Aware Screening
+- GitHub Profile Analyzer
+- Multi-Agent Orchestration
 
 ## Project Goal
 Build an intelligent system that:
@@ -45,6 +51,16 @@ Build an intelligent system that:
   - Duplicate Resume Detection (simple name/email + semantic sim)
   - Interview Question Generator (Gemini)
   - LLM-based Recruiter Chatbot (basic in Streamlit with Gemini)
+- **Hackathon Upgrade Features**:
+  - AI Interview Agent with structured focus areas, question bank, scorecard, and red flags
+  - Advanced skill gap analysis with severity, readiness, and learning recommendations
+  - Recruiter decision dashboard with shortlist CSV export
+  - Batch resume analysis with recommendation and risk aggregation
+  - Explainable scoring cards with weighted contribution and evidence per dimension
+  - Candidate PDF reports for recruiter handoff
+  - Bias-aware screening with anonymized candidate profile and protected-signal warnings
+  - GitHub profile analyzer for public repository signals when resume links are present
+  - Multi-agent orchestration that enriches each candidate while preserving legacy fields
 
 ## Architecture
 See architecture diagram below (text-based):
@@ -63,13 +79,20 @@ Streamlit Dashboard (app.py)
     +--> ranking/ranking_engine.py --> Weighted scoring + ranking
     |
     +--> explainability/explanation_engine.py --> Gemini explanations
+    +--> explainability/scoring_explainer.py --> Evidence-backed scorecards
+    +--> explainability/skill_gap_engine.py --> Prioritized skill gap plan
     |
     +--> rag/faiss_search.py --> Vector DB for semantic search
     |
     +--> dashboard/analytics.py --> Visualizations
+    +--> dashboard/recruiter_dashboard.py --> Batch and shortlist analytics
+    |
+    +--> reports/pdf_report.py --> Candidate PDF reports
+    |
+    +--> agents/* --> JD, candidate, match, risk, hiring, interview, bias, GitHub agents
     |
     v
-    Skill Gap, Fraud, etc.
+    Skill Gap, Fraud, Fairness, Interview Kits, Reports, Recruiter Decisions
 ```
 
 ## Tech Stack
@@ -79,6 +102,24 @@ Streamlit Dashboard (app.py)
 - Vector Search: FAISS
 - LLM: Google Gemini (gemini-1.5-flash)
 - Data: Pandas, NumPy, scikit-learn
+- Reports: fpdf2
+
+## Multi-Agent Outputs
+
+The ranked candidate object remains backward compatible with the original app fields:
+`scores`, `overall_score`, and `rank`.
+
+The enhanced orchestrator also attaches:
+- `agent_analysis`
+- `risk_report`
+- `hiring_recommendation`
+- `advanced_skill_gap`
+- `score_evidence`
+- `interview_plan`
+- `bias_report`
+- `github_report`
+
+These outputs power the interview agent, recruiter dashboard, batch analysis, explainable scoring, fairness review, GitHub review, and PDF reports.
 
 ## Setup & Run
 

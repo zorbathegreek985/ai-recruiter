@@ -54,11 +54,36 @@ def analyze_candidate(candidate_input: Any) -> Dict[str, Any]:
     text = candidate.get("raw_text", "")
     certifications = candidate.get("certifications") or extract_certifications(text)
 
-    analysis = {
+    profile = {
+        "identity": {
+            "name": candidate.get("name", "Unknown Candidate"),
+            "email": candidate.get("email"),
+            "phone": candidate.get("phone"),
+            "source_file": candidate.get("source_file") or candidate.get("file_path"),
+        },
         "skills": candidate.get("skills", []),
+        "education": candidate.get("education", "Not specified"),
+        "experience": {
+            "years": candidate.get("experience_years", 0),
+            "raw_summary": candidate.get("experience", ""),
+        },
+        "certifications": certifications,
+        "projects": candidate.get("projects", []),
+        "raw_text_preview": (text or "")[:500],
+    }
+
+    analysis = {
+        "profile": profile,
+        "skills": candidate.get("skills", []),
+        "education": candidate.get("education", "Not specified"),
         "experience_years": candidate.get("experience_years", 0),
         "projects": candidate.get("projects", []),
         "certifications": certifications,
     }
 
-    return {**candidate, "certifications": certifications, "candidate_analysis": analysis}
+    return {
+        **candidate,
+        "certifications": certifications,
+        "candidate_profile": profile,
+        "candidate_analysis": analysis,
+    }

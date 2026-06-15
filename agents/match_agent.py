@@ -8,8 +8,10 @@ from typing import Any, Dict
 
 from embeddings.embedding_engine import semantic_similarity
 from ranking.ranking_engine import (
+    compute_education_score,
     compute_experience_score,
     compute_overall_score,
+    compute_projects_score,
     compute_skill_match_score,
 )
 
@@ -49,6 +51,14 @@ def analyze_match(candidate: Dict[str, Any], jd: Dict[str, Any]) -> Dict[str, An
         candidate.get("experience_years", 0),
         jd.get("experience", ""),
     )
+    education_match = compute_education_score(
+        candidate.get("education", ""),
+        jd.get("education", ""),
+    )
+    project_match = compute_projects_score(
+        candidate.get("projects", []),
+        jd.get("raw_text", ""),
+    )
 
     semantic_fit = semantic_similarity(_candidate_text(candidate), _jd_text(jd)) * 100
     scores = compute_overall_score(candidate, jd)
@@ -57,5 +67,15 @@ def analyze_match(candidate: Dict[str, Any], jd: Dict[str, Any]) -> Dict[str, An
         "semantic_fit": round(max(0.0, min(100.0, semantic_fit)), 2),
         "skill_match": round(skill_match, 2),
         "experience_match": round(experience_match, 2),
+        "education_match": round(education_match, 2),
+        "project_match": round(project_match, 2),
+        "explainable_scores": {
+            "skill_match": scores.get("skill_match", round(skill_match, 2)),
+            "experience_match": scores.get("experience", round(experience_match, 2)),
+            "education_match": scores.get("education", round(education_match, 2)),
+            "project_match": scores.get("projects", round(project_match, 2)),
+            "semantic_fit": round(max(0.0, min(100.0, semantic_fit)), 2),
+            "overall": scores.get("overall", 0),
+        },
         "scores": scores,
     }

@@ -7,10 +7,15 @@ the ranked candidate structure expected by the original Streamlit app.
 from typing import Any, Dict, List, Optional
 
 from agents.candidate_analyst_agent import analyze_candidate
+from agents.bias_agent import analyze_bias_signals
+from agents.github_agent import analyze_github_profile
 from agents.hiring_agent import generate_hiring_recommendation
+from agents.interview_agent import generate_interview_plan
 from agents.jd_analyst_agent import analyze_jd
 from agents.match_agent import analyze_match
 from agents.risk_agent import analyze_batch_risk, analyze_candidate_risk
+from explainability.scoring_explainer import build_score_evidence
+from explainability.skill_gap_engine import build_advanced_skill_gap
 
 
 def run_recruiting_pipeline(candidates: List[Dict[str, Any]], jd: Dict[str, Any]) -> Dict[str, Any]:
@@ -25,6 +30,18 @@ def run_recruiting_pipeline(candidates: List[Dict[str, Any]], jd: Dict[str, Any]
         risk = analyze_candidate_risk(candidate, batch_risk)
         hiring = generate_hiring_recommendation(candidate, analyzed_jd, match, risk)
         scores = match["scores"]
+        advanced_gap = build_advanced_skill_gap(candidate, analyzed_jd)
+        score_evidence = build_score_evidence(
+            {**candidate, "scores": scores, "overall_score": scores["overall"], "hiring_recommendation": hiring},
+            analyzed_jd,
+        )
+        interview_plan = generate_interview_plan(
+            {**candidate, "scores": scores, "overall_score": scores["overall"], "hiring_recommendation": hiring},
+            analyzed_jd,
+            {"missing_skills": hiring.get("missing_skills", []), "matched_skills": advanced_gap.get("matched_required", [])},
+        )
+        bias_report = analyze_bias_signals(candidate)
+        github_report = analyze_github_profile(candidate)
 
         enriched.append(
             {
@@ -38,10 +55,18 @@ def run_recruiting_pipeline(candidates: List[Dict[str, Any]], jd: Dict[str, Any]
                         "semantic_fit": match["semantic_fit"],
                         "skill_match": match["skill_match"],
                         "experience_match": match["experience_match"],
+                        "education_match": match["education_match"],
+                        "project_match": match["project_match"],
+                        "explainable_scores": match["explainable_scores"],
                     },
                 },
                 "risk_report": risk,
                 "hiring_recommendation": hiring,
+                "advanced_skill_gap": advanced_gap,
+                "score_evidence": score_evidence,
+                "interview_plan": interview_plan,
+                "bias_report": bias_report,
+                "github_report": github_report,
             }
         )
 

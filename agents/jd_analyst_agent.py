@@ -52,15 +52,34 @@ def analyze_jd(jd_input: Any) -> Dict[str, Any]:
     """Return a structured JD analysis with required fields for downstream agents."""
     jd = jd_input if isinstance(jd_input, dict) else extract_structured_jd(jd_input)
     text = jd.get("raw_text", "")
+    experience_requirements = _extract_experience_years(jd.get("experience", ""))
+    industry_domain = _infer_domain(text, jd.get("role_category", ""))
 
-    analysis = {
+    profile = {
+        "role_category": jd.get("role_category", "General Role"),
+        "industry_domain": industry_domain,
         "required_skills": jd.get("required_skills", []),
         "preferred_skills": jd.get("preferred_skills", []),
-        "experience_requirements": _extract_experience_years(jd.get("experience", "")),
-        "industry_domain": _infer_domain(text, jd.get("role_category", "")),
+        "experience_requirements": experience_requirements,
+        "education_requirements": jd.get("education", "Not specified"),
+        "raw_text_preview": (text or "")[:500],
     }
 
-    return {**jd, "jd_analysis": analysis, "industry_domain": analysis["industry_domain"]}
+    analysis = {
+        "profile": profile,
+        "required_skills": jd.get("required_skills", []),
+        "preferred_skills": jd.get("preferred_skills", []),
+        "experience_requirements": experience_requirements,
+        "education_requirements": jd.get("education", "Not specified"),
+        "industry_domain": industry_domain,
+    }
+
+    return {
+        **jd,
+        "jd_profile": profile,
+        "jd_analysis": analysis,
+        "industry_domain": analysis["industry_domain"],
+    }
 
 
 def summarize_jd_requirements(jd: Dict[str, Any]) -> Dict[str, List[str]]:
