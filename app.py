@@ -2,10 +2,6 @@
 AI Recruiter - Main Streamlit Application
 Intelligent Candidate Discovery & Ranking
 """
-import sys
-print("PYTHON:", sys.executable)
-print("PATH:", sys.path)
-
 import streamlit as st
 import os
 import tempfile
@@ -14,7 +10,12 @@ from typing import List, Dict, Any
 import json
 
 # Import all modules
-from parsers.resume_parser import batch_parse_resumes, extract_structured_resume
+from parsers.resume_parser import (
+    batch_parse_resumes,
+    extract_structured_resume,
+    get_optional_dependency_warnings as get_resume_parser_warnings,
+)
+from parsers.jd_parser import get_optional_dependency_warnings as get_jd_parser_warnings
 from agents import analyze_jd, rank_candidates_with_agents
 from explainability.explanation_engine import (
     generate_explanation, generate_skill_gap_analysis, 
@@ -61,6 +62,12 @@ st.markdown("""
     .candidate-card {border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin: 8px 0;}
 </style>
 """, unsafe_allow_html=True)
+
+optional_dependency_warnings = sorted(
+    set(get_resume_parser_warnings() + get_jd_parser_warnings())
+)
+for warning in optional_dependency_warnings:
+    st.warning(warning)
 
 # Session state initialization
 if "jd_data" not in st.session_state:

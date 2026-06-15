@@ -3,10 +3,25 @@ Job Description Parser Module
 Parses JD PDF or text into structured requirements.
 """
 import fitz
-import pdfplumber
 import re
 from typing import Dict, List, Any, Optional
 import os
+import warnings
+
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
+
+PDFPLUMBER_MISSING_MESSAGE = (
+    "pdfplumber is not installed. The app can still run and parse most PDFs with "
+    "PyMuPDF, but difficult scanned or layout-heavy PDFs may extract less text."
+)
+
+
+def get_optional_dependency_warnings() -> List[str]:
+    """Return parser dependency warnings that should be shown in the UI."""
+    return [] if pdfplumber is not None else [PDFPLUMBER_MISSING_MESSAGE]
 
 def extract_text_from_jd(jd_path_or_text: str) -> str:
     """Extract text from JD PDF or return text if already string. Supports .txt too."""
@@ -16,7 +31,7 @@ def extract_text_from_jd(jd_path_or_text: str) -> str:
                 with open(jd_path_or_text, 'r', encoding='utf-8', errors='ignore') as f:
                     return f.read().strip()
             except Exception as e:
-                print(f"txt read failed: {e}")
+                warnings.warn(f"txt read failed: {e}", RuntimeWarning)
         elif jd_path_or_text.lower().endswith('.pdf'):
             text = ""
             try:
@@ -25,15 +40,18 @@ def extract_text_from_jd(jd_path_or_text: str) -> str:
                     text += page.get_text("text") + "\n"
                 doc.close()
             except Exception as e:
-                print(f"PyMuPDF JD failed: {e}")
-                try:
-                    with pdfplumber.open(jd_path_or_text) as pdf:
-                        for page in pdf.pages:
-                            t = page.extract_text()
-                            if t:
-                                text += t + "\n"
-                except Exception as e2:
-                    print(f"pdfplumber JD failed: {e2}")
+                warnings.warn(f"PyMuPDF JD failed: {e}", RuntimeWarning)
+                if pdfplumber is None:
+                    warnings.warn(PDFPLUMBER_MISSING_MESSAGE, RuntimeWarning)
+                else:
+                    try:
+                        with pdfplumber.open(jd_path_or_text) as pdf:
+                            for page in pdf.pages:
+                                t = page.extract_text()
+                                if t:
+                                    text += t + "\n"
+                    except Exception as e2:
+                        warnings.warn(f"pdfplumber JD failed: {e2}", RuntimeWarning)
             return text.strip()
     return jd_path_or_text  # Assume it's raw text
 

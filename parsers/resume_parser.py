@@ -1,15 +1,30 @@
 """
 Resume Parser Module
-Parses PDF resumes into structured JSON using PyMuPDF, pdfplumber, and spaCy.
+Parses PDF resumes into structured JSON using PyMuPDF, optional pdfplumber, and spaCy.
 Handles various formats, extracts name, email, skills, education, experience, projects.
 """
 import fitz  # PyMuPDF
-import pdfplumber
 import spacy
 import re
 import json
 from typing import Dict, List, Any, Optional
 import os
+import warnings
+
+try:
+    import pdfplumber
+except ImportError:
+    pdfplumber = None
+
+PDFPLUMBER_MISSING_MESSAGE = (
+    "pdfplumber is not installed. The app can still run and parse most PDFs with "
+    "PyMuPDF, but difficult scanned or layout-heavy PDFs may extract less text."
+)
+
+
+def get_optional_dependency_warnings() -> List[str]:
+    """Return parser dependency warnings that should be shown in the UI."""
+    return [] if pdfplumber is not None else [PDFPLUMBER_MISSING_MESSAGE]
 
 # Load spaCy model (small for speed)
 try:
@@ -34,13 +49,13 @@ for cat, skills in SKILL_ONTOLOGY.items():
     ALL_SKILLS.update(skills)
 
 def extract_text_from_pdf(pdf_path: str) -> str:
-    """Extract text from PDF using both fitz and pdfplumber for robustness. Also supports .txt."""
+    """Extract text from PDF using PyMuPDF with optional pdfplumber fallback. Also supports .txt."""
     if pdf_path.lower().endswith('.txt'):
         try:
             with open(pdf_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return f.read().strip()
         except Exception as e:
-            print(f"txt read failed: {e}")
+            warnings.warn(f"txt read failed: {e}", RuntimeWarning)
             return ""
     
     text = ""
@@ -51,17 +66,20 @@ def extract_text_from_pdf(pdf_path: str) -> str:
             text += page.get_text("text") + "\n"
         doc.close()
     except Exception as e:
-        print(f"PyMuPDF failed: {e}")
+        warnings.warn(f"PyMuPDF failed: {e}", RuntimeWarning)
     
     if len(text.strip()) < 100:  # Fallback if poor extraction
-        try:
-            with pdfplumber.open(pdf_path) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n"
-        except Exception as e:
-            print(f"pdfplumber failed: {e}")
+        if pdfplumber is None:
+            warnings.warn(PDFPLUMBER_MISSING_MESSAGE, RuntimeWarning)
+        else:
+            try:
+                with pdfplumber.open(pdf_path) as pdf:
+                    for page in pdf.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text += page_text + "\n"
+            except Exception as e:
+                warnings.warn(f"pdfplumber failed: {e}", RuntimeWarning)
     
     return text.strip()
 
@@ -246,7 +264,7 @@ def batch_parse_resumes(resume_paths: List[str]) -> List[Dict[str, Any]]:
             parsed = extract_structured_resume(path)
             results.append(parsed)
         except Exception as e:
-            print(f"Error parsing {path}: {e}")
+            warnings.warn(f"Error parsing {path}: {e}", RuntimeWarning)
             results.append({
                 "name": os.path.basename(path),
                 "email": None,

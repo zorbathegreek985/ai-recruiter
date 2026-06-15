@@ -1,6 +1,5 @@
 streamlit>=1.28.0
 PyMuPDF>=1.23.0
-pdfplumber>=0.10.0
 spacy>=3.7.0
 faiss-cpu>=1.7.4
 google-generativeai>=0.3.0
@@ -13,5 +12,6 @@ PyYAML>=6.0.1
 tqdm>=4.66.0
 PyPDF2>=3.0.1
 fpdf2>=2.7.0
+# Optional PDF fallback: install pdfplumber>=0.10.0 for difficult scanned or layout-heavy PDFs.
 # Note: sentence-transformers not included (heavy). Using Gemini embeddings when API key provided, otherwise TF-IDF fallback.
 https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
