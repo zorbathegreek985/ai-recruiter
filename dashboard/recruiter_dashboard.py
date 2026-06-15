@@ -33,7 +33,12 @@ def build_batch_summary(ranked_candidates: List[Dict[str, Any]]) -> Dict[str, An
         "total": len(ranked_candidates),
         "strong_hires": recommendations.get("Strong Hire", 0),
         "interview_ready": recommendations.get("Interview", 0),
-        "needs_review": recommendations.get("Review Manually", 0) + recommendations.get("Maybe", 0),
+        "needs_review": (
+            recommendations.get("Consider", 0)
+            + recommendations.get("Reject", 0)
+            + recommendations.get("Review Manually", 0)
+            + recommendations.get("Maybe", 0)
+        ),
         "avg_score": round(sum(c.get("overall_score", 0) for c in ranked_candidates) / len(ranked_candidates), 1),
         "avg_risk": round(sum(risks) / len(risks), 1) if risks else 0,
         "top_missing_skills": missing.most_common(5),

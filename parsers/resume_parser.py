@@ -75,7 +75,7 @@ for cat, skills in SKILL_ONTOLOGY.items():
 
 def extract_text_from_pdf(pdf_path: str) -> str:
     """Extract text from PDF using PyMuPDF with optional pdfplumber fallback. Also supports .txt."""
-    if pdf_path.lower().endswith('.txt'):
+    if pdf_path.lower().endswith((".txt", ".md")):
         try:
             with open(pdf_path, 'r', encoding='utf-8', errors='ignore') as f:
                 return f.read().strip()
@@ -144,9 +144,9 @@ def extract_name(text: str) -> Optional[str]:
 
 def extract_phone(text: str) -> Optional[str]:
     """Extract phone number."""
-    phone_pattern = r'(\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
-    matches = re.findall(phone_pattern, text)
-    return matches[0] if matches else None
+    phone_pattern = r'(?:\+?\d{1,3}[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}'
+    match = re.search(phone_pattern, text)
+    return match.group(0) if match else None
 
 def extract_skills(text: str) -> List[str]:
     """Extract skills using ontology matching + spaCy. Cleaned for noise."""

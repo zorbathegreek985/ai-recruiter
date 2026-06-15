@@ -111,6 +111,21 @@ def compute_cosine_similarity(emb1: np.ndarray, emb2: np.ndarray) -> float:
 
 def batch_get_embeddings(texts: List[str], use_gemini_first: bool = True) -> List[np.ndarray]:
     """Get embeddings for multiple texts efficiently."""
+    global _tfidf_vectorizer
+
+    if not USE_GEMINI and TfidfVectorizer is not None:
+        _tfidf_vectorizer = TfidfVectorizer(
+            max_features=512,
+            stop_words="english",
+            ngram_range=(1, 2),
+            min_df=1,
+        )
+        try:
+            matrix = _tfidf_vectorizer.fit_transform([text or "empty profile" for text in texts])
+            return [row.astype(np.float32) for row in matrix.toarray()]
+        except ValueError:
+            return [_hash_embedding(text) for text in texts]
+
     embeddings = []
     for i, text in enumerate(texts):
         embeddings.append(get_embedding(text, fit_tfidf=(i == 0 and not USE_GEMINI)))
@@ -119,6 +134,19 @@ def batch_get_embeddings(texts: List[str], use_gemini_first: bool = True) -> Lis
 
 def semantic_similarity(text1: str, text2: str) -> float:
     """Direct semantic similarity between two texts."""
+    if not USE_GEMINI and TfidfVectorizer is not None:
+        vectorizer = TfidfVectorizer(
+            max_features=512,
+            stop_words="english",
+            ngram_range=(1, 2),
+            min_df=1,
+        )
+        try:
+            matrix = vectorizer.fit_transform([text1 or "empty profile", text2 or "empty profile"]).toarray()
+            return compute_cosine_similarity(matrix[0].astype(np.float32), matrix[1].astype(np.float32))
+        except ValueError:
+            return compute_cosine_similarity(_hash_embedding(text1), _hash_embedding(text2))
+
     emb1 = get_embedding(text1 or "empty profile")
     emb2 = get_embedding(text2 or "empty profile")
     return compute_cosine_similarity(emb1, emb2)

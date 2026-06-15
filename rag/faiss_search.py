@@ -43,11 +43,15 @@ class CandidateVectorStore:
     def add_candidates(self, candidates: List[Dict[str, Any]]):
         """Add or update candidates with their embeddings."""
         new_embs = []
-        for cand in candidates:
-            # Use raw_text or constructed text for embedding
-            text_repr = self._candidate_to_text(cand)
+        text_reprs = [self._candidate_to_text(candidate) for candidate in candidates]
+        try:
+            candidate_embeddings = batch_get_embeddings(text_reprs)
+        except Exception as e:
+            warnings.warn(f"Batch embedding error: {e}", RuntimeWarning)
+            candidate_embeddings = []
+
+        for cand, emb in zip(candidates, candidate_embeddings):
             try:
-                emb = get_embedding(text_repr)
                 if len(emb) != self.dimension:
                     # Handle TF-IDF dim mismatch by padding or re-init
                     if self.dimension == 768 and len(emb) == 512:

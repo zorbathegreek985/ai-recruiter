@@ -110,6 +110,36 @@ def render_list(items: List[str], empty: str = "None detected"):
     for item in items:
         st.write(f"- {item}")
 
+
+def load_samples():
+    """Load the pre-generated sample data (prefers clean .txt for reliable demo parsing)."""
+    jd_path = "data/jd/ml_engineer_jd.txt"
+    resume_paths = [
+        "data/resumes/john_doe_strong_match.txt",
+        "data/resumes/alice_chen_nlp.txt",
+        "data/resumes/jane_smith_medium.txt",
+        "data/resumes/bob_johnson_weaker.txt"
+    ]
+
+    with st.spinner("Loading and parsing sample data..."):
+        jd = analyze_jd(jd_path)
+        st.session_state.jd_data = jd
+
+        parsed = batch_parse_resumes(resume_paths)
+        st.session_state.candidates = parsed
+
+        ranked = rank_candidates_with_agents(parsed, jd)
+        st.session_state.ranked_candidates = ranked
+
+        vector_store.candidates = []
+        vector_store.embeddings = []
+        vector_store.add_candidates(parsed)
+        st.session_state.vector_store_loaded = True
+
+    st.success("Sample data loaded! Explore the tabs below.")
+    st.rerun()
+
+
 optional_dependency_warnings = sorted(
     set(get_resume_parser_warnings() + get_jd_parser_warnings())
 )
@@ -188,38 +218,6 @@ with st.sidebar:
     # Load sample data button
     if st.button("📥 Load Sample Dataset (4 candidates + JD)", type="primary"):
         load_samples()
-
-def load_samples():
-    """Load the pre-generated sample data (prefers clean .txt for reliable demo parsing)."""
-    jd_path = "data/jd/ml_engineer_jd.txt"  # reliable text
-    resume_paths = [
-        "data/resumes/john_doe_strong_match.txt",
-        "data/resumes/alice_chen_nlp.txt",
-        "data/resumes/jane_smith_medium.txt",
-        "data/resumes/bob_johnson_weaker.txt"
-    ]
-    
-    with st.spinner("Loading and parsing sample data..."):
-        # Parse JD
-        jd = analyze_jd(jd_path)
-        st.session_state.jd_data = jd
-        
-        # Parse resumes (txt supported)
-        parsed = batch_parse_resumes(resume_paths)
-        st.session_state.candidates = parsed
-        
-        # Rank
-        ranked = rank_candidates_with_agents(parsed, jd)
-        st.session_state.ranked_candidates = ranked
-        
-        # Rebuild vector store
-        vector_store.candidates = []
-        vector_store.embeddings = []
-        vector_store.add_candidates(parsed)
-        st.session_state.vector_store_loaded = True
-        
-    st.success("✅ Sample data loaded! Explore the tabs below.")
-    st.rerun()
 
 # Main Header
 st.markdown('<h1 class="main-header">🤖 AI Recruiter</h1>', unsafe_allow_html=True)
@@ -306,8 +304,8 @@ with tab2:
     st.header("Resume Upload, Parsing & Ranking")
     
     uploaded_files = st.file_uploader(
-        "Upload multiple PDF resumes (max 20)",
-        type=["pdf"],
+        "Upload multiple resumes (PDF, TXT, or Markdown)",
+        type=["pdf", "txt", "md"],
         accept_multiple_files=True,
         key="resume_uploader"
     )
@@ -324,7 +322,8 @@ with tab2:
                     
                     if uploaded_files:
                         for uploaded_file in uploaded_files:
-                            with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+                            suffix = os.path.splitext(uploaded_file.name)[1].lower() or ".txt"
+                            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
                                 tmp.write(uploaded_file.getvalue())
                                 tmp_path = tmp.name
                             
@@ -550,22 +549,22 @@ with tab4:
         col1, col2 = st.columns(2)
         
         with col1:
-            st.plotly_chart(
+            safe_plotly_chart(
                 create_ranking_distribution_chart(ranked),
                 use_container_width=True
             )
-            st.plotly_chart(
+            safe_plotly_chart(
                 create_average_match_gauge(ranked),
                 use_container_width=True
             )
         
         with col2:
-            st.plotly_chart(
+            safe_plotly_chart(
                 create_top_skills_chart(ranked),
                 use_container_width=True
             )
             if jd:
-                st.plotly_chart(
+                safe_plotly_chart(
                     create_skill_gap_frequency_chart(ranked, jd),
                     use_container_width=True
                 )
@@ -578,7 +577,7 @@ with tab4:
         )
         selected_cand = next((c for c in ranked if c["name"] == selected_name), None)
         if selected_cand:
-            st.plotly_chart(create_score_breakdown_chart(selected_cand), use_container_width=True)
+            safe_plotly_chart(create_score_breakdown_chart(selected_cand), use_container_width=True)
 
 # ============ TAB 5: Skill Gaps ============
 with tab5:
@@ -654,6 +653,13 @@ with tab5:
                     use_container_width=True,
                     hide_index=True,
                 )
+            growth_plan = selected_gap_candidate.get("career_growth_plan") or generate_growth_plan(selected_gap_candidate, jd)
+            st.write("**Career Growth Roadmap**")
+            g1, g2 = st.columns(2)
+            g1.metric("Current Match", f"{growth_plan['current_match_score']}%")
+            g2.metric("Projected Match", f"{growth_plan['projected_match_score']}%")
+            st.caption(growth_plan["summary"])
+            st.dataframe(pd.DataFrame(growth_plan["roadmap"]), use_container_width=True, hide_index=True)
 
 # ============ TAB 6: Bonus Tools ============
 with tab6:
@@ -835,17 +841,42 @@ with tab8:
         for guidance in bias_report["fair_screening_guidance"]:
             st.caption(guidance)
 
+        st.subheader("Fairness Ranking Review")
+        fairness = build_fairness_dashboard(ranked)
+        f1, f2, f3 = st.columns(3)
+        f1.metric("Top 3 Skill Overlap", fairness["metrics"]["top3_skill_overlap"])
+        f2.metric("Top 3 Education-Blind Overlap", fairness["metrics"]["top3_education_blind_overlap"])
+        f3.metric("Bias Signals", fairness["metrics"]["bias_signal_count"])
+        st.caption(f"Review status: {fairness['metrics']['review_status']}")
+
+        view_name = st.selectbox(
+            "Fairness view",
+            ["Skill-only", "Name-blind", "Education-blind"],
+            key="fairness_view_select",
+        )
+        fairness_key = {
+            "Skill-only": "skill_only",
+            "Name-blind": "name_blind",
+            "Education-blind": "education_blind",
+        }[view_name]
+        st.dataframe(pd.DataFrame(fairness[fairness_key]), use_container_width=True, hide_index=True)
+        for guidance in fairness["guidance"]:
+            st.caption(guidance)
+
         st.subheader("Candidate PDF Report")
         if st.button("Generate Candidate PDF Report"):
-            report_path = create_candidate_pdf_report(candidate, jd, evidence, gap_report, interview_plan)
-            with open(report_path, "rb") as report_file:
-                st.download_button(
-                    "Download PDF Report",
-                    report_file.read(),
-                    file_name=os.path.basename(report_path),
-                    mime="application/pdf",
-                )
-            st.success(f"Report generated: {report_path}")
+            try:
+                report_path = create_candidate_pdf_report(candidate, jd, evidence, gap_report, interview_plan)
+                with open(report_path, "rb") as report_file:
+                    st.download_button(
+                        "Download PDF Report",
+                        report_file.read(),
+                        file_name=os.path.basename(report_path),
+                        mime="application/pdf",
+                    )
+                st.success(f"Report generated: {report_path}")
+            except RuntimeError as exc:
+                st.error(str(exc))
 
 # ============ TAB 9: Batch Analysis and GitHub ============
 with tab9:
@@ -873,6 +904,21 @@ with tab9:
             )
         else:
             st.success("No recurring missing skills detected.")
+
+        st.subheader("Executive Batch Report")
+        if st.button("Generate Executive PDF Report"):
+            try:
+                report_path = create_executive_pdf_report(st.session_state.jd_data or {}, ranked)
+                with open(report_path, "rb") as report_file:
+                    st.download_button(
+                        "Download Executive PDF",
+                        report_file.read(),
+                        file_name=os.path.basename(report_path),
+                        mime="application/pdf",
+                    )
+                st.success(f"Executive report generated: {report_path}")
+            except RuntimeError as exc:
+                st.error(str(exc))
 
         st.subheader("GitHub Profile Signals")
         github_rows = []
