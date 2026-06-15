@@ -133,7 +133,7 @@ def load_samples():
 
         vector_store.candidates = []
         vector_store.embeddings = []
-        vector_store.add_candidates(parsed)
+        vector_store.add_candidates(ranked)
         st.session_state.vector_store_loaded = True
 
     st.success("Sample data loaded! Explore the tabs below.")
@@ -348,7 +348,7 @@ with tab2:
                         # Update vector store
                         vector_store.candidates = []
                         vector_store.embeddings = []
-                        vector_store.add_candidates(parsed_cands)
+                        vector_store.add_candidates(ranked)
                         st.session_state.vector_store_loaded = True
                         
                         st.success(f"✅ Processed and ranked {len(ranked)} candidates!")
