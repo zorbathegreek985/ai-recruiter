@@ -791,18 +791,32 @@ with tab7:
         legacy_gaps = generate_skill_gap_analysis(candidate, jd)
         plan = candidate.get("interview_plan") or generate_interview_plan(candidate, jd, legacy_gaps)
 
-        st.metric("Recommended Round", plan["recommended_round"].title())
+        st.metric("Recommended Round", str(plan.get("recommended_round", "not available")).title())
         st.write("**Focus Areas**")
-        for area in plan["focus_areas"]:
-            st.write(f"- {area}")
+        focus_areas = plan.get("focus_areas") or []
+        if focus_areas:
+            for area in focus_areas:
+                st.write(f"- {area}")
+        else:
+            st.info("Focus areas are unavailable for this candidate.")
 
         st.write("**Interview Questions**")
-        for i, item in enumerate(plan["questions"], 1):
-            st.markdown(f"**Q{i}. [{item['type']}]** {item['question']}")
-            st.caption(f"Signal: {item['signal']}")
+        questions = plan.get("questions") or []
+        if questions:
+            for i, item in enumerate(questions, 1):
+                st.markdown(f"**Q{i}. [{item.get('type', 'Question')}]** {item.get('question', 'Question unavailable')}")
+                st.caption(f"Signal: {item.get('signal', 'Signal unavailable')}")
+        else:
+            st.info("Interview questions are unavailable for this candidate.")
 
         st.write("**Scorecard**")
-        st.write(", ".join(plan["scorecard"]))
+        scorecard = plan.get("scorecard") or []
+        if not scorecard and plan.get("scoring_rubric"):
+            scorecard = [item.get("criterion", "Review criterion") for item in plan.get("scoring_rubric", [])]
+        if scorecard:
+            st.write(", ".join(scorecard))
+        else:
+            st.info("Scorecard is unavailable for this interview plan.")
 
 # ============ TAB 8: Reports, Fairness, Explainable Scoring ============
 with tab8:

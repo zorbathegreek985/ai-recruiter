@@ -126,6 +126,13 @@ def generate_interview_plan(
         )
 
     questions = technical_questions + scenario_questions + hr_questions + follow_up_questions + depth_questions
+    scoring_rubric = [
+        {"criterion": "Technical depth", "excellent": "Explains tradeoffs and failure modes", "concern": "Only names tools"},
+        {"criterion": "Project ownership", "excellent": "Gives measurable personal impact", "concern": "Vague team-level claims"},
+        {"criterion": "Role alignment", "excellent": "Maps experience directly to JD outcomes", "concern": "Cannot connect work to role needs"},
+        {"criterion": "Communication clarity", "excellent": "Structured, precise answers", "concern": "Unclear or evasive answers"},
+        {"criterion": "Learning agility", "excellent": "Clear ramp-up strategy for gaps", "concern": "No plan to close gaps"},
+    ]
     overall = candidate.get("overall_score", scores.get("overall", 0))
     return {
         "candidate": candidate.get("name", "Unknown"),
@@ -139,13 +146,8 @@ def generate_interview_plan(
             "follow_up": follow_up_questions,
             "depth_check": depth_questions,
         },
-        "scoring_rubric": [
-            {"criterion": "Technical depth", "excellent": "Explains tradeoffs and failure modes", "concern": "Only names tools"},
-            {"criterion": "Project ownership", "excellent": "Gives measurable personal impact", "concern": "Vague team-level claims"},
-            {"criterion": "Role alignment", "excellent": "Maps experience directly to JD outcomes", "concern": "Cannot connect work to role needs"},
-            {"criterion": "Communication clarity", "excellent": "Structured, precise answers", "concern": "Unclear or evasive answers"},
-            {"criterion": "Learning agility", "excellent": "Clear ramp-up strategy for gaps", "concern": "No plan to close gaps"},
-        ],
+        "scorecard": [item["criterion"] for item in scoring_rubric],
+        "scoring_rubric": scoring_rubric,
         "red_flags_to_check": [
             "Cannot explain claimed projects in detail",
             "Over-relies on tool names without architecture reasoning",
